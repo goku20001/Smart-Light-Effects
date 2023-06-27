@@ -1,0 +1,19 @@
+{
+  "name": "smart-light-effects",
+  "version": "1.0.0",
+  "description": "N/A.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Akashdeep Singh",
+  "license": "ISC",
+  "dependencies": {
+    "@smartthings/smartapp": "^2.5.2",
+    "axios": "^1.4.0",
+    "colors": "^1.4.0",
+    "dotenv": "^16.3.0",
+    "express": "^4.17.1"
+  }
+}
