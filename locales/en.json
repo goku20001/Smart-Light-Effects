@@ -21,5 +21,10 @@
 	"pages.wakeUp.settings.wakeUpDuration.name": "Select the duration(minutes)",
 	"pages.lightBlink.settings.blinkLight.name": "Select the lights",
 	"pages.lightBlink.settings.blinkDuration.name": "Select the duration(minutes)",
+	"pages.lightPulse.settings.pulseLight.name": "Select the lights",
+	"pages.lightPulse.settings.pulseInitialIntensity.name": "Set the initial intesity",
+	"pages.lightPulse.settings.pulseFinalIntensity.name": "Set the final intesity",
+	"pages.lightPulse.settings.pulseSpeed.name": "Set the pulse speed",
+	"pages.lightPulse.settings.loopCount.name": "Set the number of loops",
 	"Tap to set": "Tap to set"
 }

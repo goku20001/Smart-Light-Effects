@@ -11,6 +11,65 @@ let wakeUpLightIntensity = 0;
 let previousPageId = null;
 const intervalIds = [];
 
+
+
+const initiateLightPulse = async (context, initialIntesity ,finalIntesity, pulseSpeed, currCount, maxCount, interval) => {
+  const lightsConfig = context.config.pulseLight;
+
+  await context.api.devices.sendCommands(lightsConfig, [
+    {
+      capability: "switchLevel",
+      command: "setLevel",
+      arguments: [finalIntesity,pulseSpeed]
+    }
+  ])
+
+  await context.api.devices.sendCommands(lightsConfig, [
+    {
+      capability: "switchLevel",
+      command: "setLevel",
+      arguments: [initialIntesity,pulseSpeed]
+    }
+  ])
+
+  currCount.val++;
+  if(currCount.val >= maxCount){
+    clearInterval(interval)
+  }
+}
+
+
+const lightPulseEffect = async context => {
+
+  const lightsConfig = context.config.pulseLight;
+  const initialIntesity = parseInt(context.config.pulseInitialIntensity[0].stringConfig.value)
+  const finalIntesity = parseInt(context.config.pulseFinalIntensity[0].stringConfig.value)
+  const pulseSpeed = parseInt(context.config.pulseSpeed[0].stringConfig.value)
+  const maxCount = parseInt(context.config.loopCount[0].stringConfig.value)
+
+  const currCount = {val: 0};
+
+  //Set initial intesity
+  await context.api.devices.sendCommands(lightsConfig, [
+    {
+      capability: "switchLevel",
+      command: "setLevel",
+      arguments: [initialIntesity]
+    }
+  ])
+
+  // First turn on the lights if they are turned off
+  await turnOnLights(context, lightsConfig);
+
+  
+  // Set up an interval to generate pulse effect in a loop
+  const interval = setInterval(async () => {
+    await initiateLightPulse(context, initialIntesity,finalIntesity, pulseSpeed, currCount, maxCount, interval);
+  }, 5000)
+
+  intervalIds.push(interval)
+}
+
 const changeWakeUpLightIntensity = async (context, interval) => {
   if(wakeUpLightIntensity > 100){
     clearInterval(interval)
@@ -67,13 +126,13 @@ const toggleLights = async (context, interval, startTime, totalDuration, turnOn)
 
   // If lights were off then turn them on
   if(turnOn.val){
-    await turnOnLights(context)
+    await turnOnLights(context, lightsConfig)
     turnOn.val = false;
   }
 
   // If lights were on then turn them off
   else{
-    await turnOffLights(context)
+    await turnOffLights(context, lightsConfig)
     turnOn.val = true;
   }
 
@@ -85,8 +144,8 @@ const toggleLights = async (context, interval, startTime, totalDuration, turnOn)
   }
 }
 
-const turnOnLights = async context => {
-  await context.api.devices.sendCommands(context.config.blinkLight, [
+const turnOnLights = async (context, lightsConfig) => {
+  await context.api.devices.sendCommands(lightsConfig, [
     {
       capability: "switch",
       command: "on"
@@ -94,8 +153,8 @@ const turnOnLights = async context => {
   ])
 }
 
-const turnOffLights = async context => {
-  await context.api.devices.sendCommands(context.config.blinkLight, [
+const turnOffLights = async (context, lightsConfig) => {
+  await context.api.devices.sendCommands(lightsConfig, [
     {
       capability: "switch",
       command: "off"
@@ -221,7 +280,34 @@ const smartApp = new SmartApp()
   .page(LIGHT_PULSE_PAGE_ID, (context, page, configData) => {
 
     page.section('details', section => {
-      
+      section
+        .deviceSetting('pulseLight')
+        .capabilities(['switch', 'switchLevel'])
+        .permissions('rx')
+        .required(true)
+        .multiple(true);
+      section
+        .numberSetting("pulseInitialIntensity")
+        .min(1)
+        .max(100)
+        .defaultValue(10)
+        .required(true)
+      section
+        .numberSetting("pulseFinalIntensity")
+        .min(1)
+        .max(100)
+        .defaultValue(80)
+        .required(true)
+      section
+        .numberSetting("pulseSpeed")
+        .min(1)
+        .defaultValue(20)
+        .required(true)
+      section
+        .numberSetting("loopCount")
+        .min(1)
+        .defaultValue(5)
+        .required(true)
     })
     page.previousPageId('mainPage')
     page.complete('true')
@@ -248,6 +334,7 @@ const smartApp = new SmartApp()
         await lightBlinkEffect(context);
         break;
       case LIGHT_PULSE_PAGE_ID:
+        await lightPulseEffect(context);
         break;
     }
 
@@ -255,9 +342,8 @@ const smartApp = new SmartApp()
   })
 
 
-  .scheduledEventHandler('toggleLightsEventHandler', async (context, event) => {
-    lightBlinkCondition = false;
-    await context.api.schedules.delete('toggleLightsEventHandler');
+  .scheduledEventHandler('test', async (context, event) => {
+    
   })
 
   .uninstalled(async context => {
