@@ -7,11 +7,12 @@ const CIRCADIAN_LOOP_PAGE_ID = "circadianLoop"
 const LIGHT_BLINK_PAGE_ID = "lightBlink"
 const LIGHT_PULSE_PAGE_ID = "lightPulse"
 
-let lightIntensity = 0;
+let wakeUpLightIntensity = 0;
 let previousPageId = null;
+const intervalIds = [];
 
-const changeLightIntensity = async (context, interval) => {
-  if(lightIntensity > 100){
+const changeWakeUpLightIntensity = async (context, interval) => {
+  if(wakeUpLightIntensity > 100){
     clearInterval(interval)
     return
   }
@@ -22,11 +23,11 @@ const changeLightIntensity = async (context, interval) => {
     {
       capability: "switchLevel",
       command: "setLevel",
-      arguments: [lightIntensity]
+      arguments: [wakeUpLightIntensity,10]
     }
   ])
 
-  lightIntensity++;
+  wakeUpLightIntensity++;
 
 }
 
@@ -48,17 +49,85 @@ const wakeUpEffect = async context => {
     }
   ])
 
-  lightIntensity = 1;
+  wakeUpLightIntensity = 1;
 
   
   const totalDuration = parseInt(context.config.wakeUpDuration[0].stringConfig.value) * 60 * 1000; // milliseconds
   const intervalGap =  totalDuration / 100;
 
   const interval = setInterval(async () => {
-    await changeLightIntensity(context, interval);
-  },intervalGap)
+    await changeWakeUpLightIntensity(context, interval);
+  }, intervalGap)
+  intervalIds.push(interval)
 
+}
 
+const toggleLights = async (context, interval, startTime, totalDuration, turnOn) => {
+  const lightsConfig = context.config.blinkLight;
+
+  // If lights were off then turn them on
+  if(turnOn.val){
+    await turnOnLights(context)
+    turnOn.val = false;
+  }
+
+  // If lights were on then turn them off
+  else{
+    await turnOffLights(context)
+    turnOn.val = true;
+  }
+
+  const currTime = Date.now();
+
+  //Stop Condition
+  if(currTime - startTime >= totalDuration){
+    clearInterval(interval);
+  }
+}
+
+const turnOnLights = async context => {
+  await context.api.devices.sendCommands(context.config.blinkLight, [
+    {
+      capability: "switch",
+      command: "on"
+    }
+  ])
+}
+
+const turnOffLights = async context => {
+  await context.api.devices.sendCommands(context.config.blinkLight, [
+    {
+      capability: "switch",
+      command: "off"
+    }
+  ])
+}
+
+const lightBlinkEffect = async context => {
+  const lightsConfig = context.config.blinkLight;
+
+  //Turn off all the lights and set intesity to 100
+  await context.api.devices.sendCommands(lightsConfig, [
+    {
+      capability: "switchLevel",
+      command: "setLevel",
+      arguments: [100]
+    },
+    {
+      capability: "switch",
+      command: "off"
+    }
+  ])
+
+  const totalDuration = parseInt(context.config.blinkDuration[0].stringConfig.value) * 60 * 1000 //milliseconds
+  lightBlinkCount = 0;
+
+  const startTime = Date.now();
+  const turnOn = {val: true};
+  const interval = setInterval(async () => {
+    await toggleLights(context, interval, startTime, totalDuration, turnOn);
+  }, 2000)
+  intervalIds.push(interval)
 }
 
 
@@ -99,13 +168,13 @@ const smartApp = new SmartApp()
         .required(true)
         .multiple(true);
       section
-          .numberSetting("wakeUpDuration")
-          .min(5)
-          .max(60)
-          .step(5)
-          .style('SLIDER')
-          .defaultValue(5)
-          .postMessage(' ')
+        .numberSetting("wakeUpDuration")
+        .min(5)
+        .max(60)
+        .step(1)
+        .style('SLIDER')
+        .defaultValue(5)
+        .postMessage(' ')
 
     })
     page.previousPageId('mainPage')
@@ -128,7 +197,20 @@ const smartApp = new SmartApp()
   .page(LIGHT_BLINK_PAGE_ID, (context, page, configData) => {
 
     page.section('details', section => {
-      
+      section
+        .deviceSetting('blinkLight')
+        .capabilities(['switch', 'switchLevel'])
+        .permissions('rx')
+        .required(true)
+        .multiple(true);
+      section
+        .numberSetting("blinkDuration")
+        .min(1)
+        .max(60)
+        .step(1)
+        .style('SLIDER')
+        .defaultValue(1)
+        .postMessage(' ')
     })
     page.previousPageId('mainPage')
     page.complete('true')
@@ -163,6 +245,7 @@ const smartApp = new SmartApp()
       case CIRCADIAN_LOOP_PAGE_ID:
         break;
       case LIGHT_BLINK_PAGE_ID:
+        await lightBlinkEffect(context);
         break;
       case LIGHT_PULSE_PAGE_ID:
         break;
@@ -172,12 +255,15 @@ const smartApp = new SmartApp()
   })
 
 
-  .scheduledEventHandler('test', async (context, event) => {
-    
+  .scheduledEventHandler('toggleLightsEventHandler', async (context, event) => {
+    lightBlinkCondition = false;
+    await context.api.schedules.delete('toggleLightsEventHandler');
   })
 
   .uninstalled(async context => {
-    lightIntensity = 101;
+    //Clear all the intervals set through setInterval()
+    intervalIds.forEach(id => clearInterval(id));
+    intervalIds.length = 0;
     console.log("Smart App Uninstalled!".yellow);
   })
 
