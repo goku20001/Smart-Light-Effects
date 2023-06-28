@@ -26,5 +26,8 @@
 	"pages.lightPulse.settings.pulseFinalIntensity.name": "Set the final intesity",
 	"pages.lightPulse.settings.pulseSpeed.name": "Set the pulse speed",
 	"pages.lightPulse.settings.loopCount.name": "Set the number of loops",
+	"pages.circadianLoop.settings.circadianLight.name": "Select the lights",
+	"pages.circadianLoop.settings.circadianDuration.name": "Set the duration of one cycle(minutes)",
+	"pages.circadianLoop.settings.circadianLoopCount.name": "Set the number of loops",
 	"Tap to set": "Tap to set"
 }

@@ -13,6 +13,75 @@ const intervalIds = [];
 
 
 
+const changeColorTemperature = async (context, lightsConfig, currTemp, lowestTemp, highestTemp, increment, interval, currCount, maxCount) => {
+  if(increment.val > 0)
+    currTemp.val = Math.min(highestTemp, currTemp.val + increment.val);
+  else
+    currTemp.val = Math.max(lowestTemp, currTemp.val + increment.val);
+
+  await context.api.devices.sendCommands(lightsConfig, [
+    {
+      capability: "colorTemperature",
+      command: "setColorTemperature",
+      arguments: [currTemp.val]
+    }
+  ])
+  
+
+  if(currTemp.val === highestTemp){
+    increment.val = -1 * increment.val;
+  }
+
+  if(currTemp.val === lowestTemp){
+    currCount.val++;
+    if(currCount.val === maxCount){
+      clearInterval(interval)
+    }
+    else{
+      increment.val = -1 * increment.val;
+    }
+      
+  }
+  
+}
+
+
+const circadianEffect = async context => {
+  const lowestTemp = 2700, highestTemp = 6500 //Kelvin
+  const duration =  parseInt(context.config.circadianDuration[0].stringConfig.value) * 30 // Duration of half cycle in seconds
+  const steps = duration / 3;
+  const increment = {val: Math.trunc((highestTemp-lowestTemp) / (steps-2))}
+  const maxCount = parseInt(context.config.circadianLoopCount[0].stringConfig.value)
+  const currCount = {val: 0}
+  const lightsConfig = context.config.circadianLight;
+
+  // Set intial color temperature
+  await context.api.devices.sendCommands(lightsConfig, [
+    {
+      capability: "colorTemperature",
+      command: "setColorTemperature",
+      arguments: [lowestTemp]
+    }
+  ])
+
+  //Turn On the lights
+  await context.api.devices.sendCommands(lightsConfig, [
+    {
+      capability: "switch",
+      command: "on"
+    }
+  ])
+
+  const currTemp = {val: lowestTemp}
+
+  const interval = setInterval(async () => {
+    await changeColorTemperature(context, lightsConfig, currTemp, lowestTemp, highestTemp, increment, interval, currCount, maxCount)
+  }, 3000)
+
+  intervalIds.push(interval);
+}
+
+
 const initiateLightPulse = async (context, initialIntesity ,finalIntesity, pulseSpeed, currCount, maxCount, interval) => {
   const lightsConfig = context.config.pulseLight;
 
@@ -245,7 +314,22 @@ const smartApp = new SmartApp()
   .page(CIRCADIAN_LOOP_PAGE_ID, (context, page, configData) => {
 
     page.section('details', section => {
-      
+      section
+        .deviceSetting('circadianLight')
+        .capabilities(['switch', 'colorTemperature'])
+        .permissions('rx')
+        .required(true)
+        .multiple(true);
+      section
+        .numberSetting("circadianDuration")
+        .min(1)
+        .defaultValue(2)
+        .required(true)
+      section
+        .numberSetting("circadianLoopCount")
+        .min(1)
+        .defaultValue(2)
+        .required(true)
     })
     page.previousPageId('mainPage')
     page.complete('true')
@@ -329,6 +413,7 @@ const smartApp = new SmartApp()
         await wakeUpEffect(context);
         break;
       case CIRCADIAN_LOOP_PAGE_ID:
+        await circadianEffect(context)
         break;
       case LIGHT_BLINK_PAGE_ID:
         await lightBlinkEffect(context);
