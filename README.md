@@ -13,3 +13,6 @@ https://github.com/goku20001/Smart-Light-Effects/assets/98842207/c82f171b-c90a-4
 
 ## Light Pulse Effect
 https://github.com/goku20001/Smart-Light-Effects/assets/98842207/c4e5699d-f584-4a01-920d-ed10358e69b1
+
+## Circadian Effect
+https://github.com/goku20001/Smart-Light-Effects/assets/98842207/e8d19033-99e0-4679-84e8-2ebfbc75d9c9
