@@ -15,5 +15,9 @@
     "colors": "^1.4.0",
     "dotenv": "^16.3.0",
     "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "ava": "^4.0.1",
+    "serverless": "^3.2.1"
   }
 }
