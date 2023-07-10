@@ -9,7 +9,7 @@ const LIGHT_PULSE_PAGE_ID = "lightPulse"
 
 let wakeUpLightIntensity = 0;
 let previousPageId = null;
-const intervalIds = [];
+let intervalId = null;
 
 
 
@@ -78,7 +78,7 @@ const circadianEffect = async context => {
     await changeColorTemperature(context, lightsConfig, currTemp, lowestTemp, highestTemp, increment, interval, currCount, maxCount)
   }, 3000)
 
-  intervalIds.push(interval);
+  intervalId = interval;
 }
 
 
@@ -136,7 +136,7 @@ const lightPulseEffect = async context => {
     await initiateLightPulse(context, initialIntesity,finalIntesity, pulseSpeed, currCount, maxCount, interval);
   }, 5000)
 
-  intervalIds.push(interval)
+  intervalId = interval
 }
 
 const changeWakeUpLightIntensity = async (context, interval) => {
@@ -186,7 +186,7 @@ const wakeUpEffect = async context => {
   const interval = setInterval(async () => {
     await changeWakeUpLightIntensity(context, interval);
   }, intervalGap)
-  intervalIds.push(interval)
+  intervalId = interval
 
 }
 
@@ -255,7 +255,7 @@ const lightBlinkEffect = async context => {
   const interval = setInterval(async () => {
     await toggleLights(context, interval, startTime, totalDuration, turnOn);
   }, 2000)
-  intervalIds.push(interval)
+  intervalId = interval
 }
 
 
@@ -402,6 +402,10 @@ const smartApp = new SmartApp()
   .updated(async (context, updateData) => {
     // Updated defines what code to run when the SmartApp is installed or the settings are updated by the user.
 
+    if(intervalId != null){
+      clearInterval(intervalId);
+    }
+
     // Clear any existing configuration.
     await context.api.schedules.delete()
     await context.api.subscriptions.delete();
@@ -433,8 +437,7 @@ const smartApp = new SmartApp()
 
   .uninstalled(async context => {
     //Clear all the intervals set through setInterval()
-    intervalIds.forEach(id => clearInterval(id));
-    intervalIds.length = 0;
+    clearInterval(intervalId)
     console.log("Smart App Uninstalled!".yellow);
   })
 
